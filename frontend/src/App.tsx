@@ -1,8 +1,10 @@
 
+import Board from "../src/components/Board.tsx";
 function App() {
   return (
     <>
         <h1>Tic Tac Toe</h1>
+        <Board />
     </>
     
   );

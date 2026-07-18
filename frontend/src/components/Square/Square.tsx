@@ -1,15 +1,16 @@
 import type { Cell } from "../../types/game";
 
 interface  SquareProps{
-    value:Cell
+    value:Cell,
+    onClick: () => void
 }
 
 
 
-export default function Square({value}: SquareProps) {
+export default function Square({value, onClick}: SquareProps) {
   return (
     <>
-        <button >{value}</button>
+        <button onClick={onClick}>{value}</button>
     </>
   )
 }

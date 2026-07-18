@@ -7,12 +7,20 @@ function Board() {
     Array(9).fill(null)
   );
 
-  return 
+    function handleSquareClick(index: number): void {
+      setBoard((prevBoard) => {
+        const newBoard = [...prevBoard];
+        newBoard[index] = "cross";  
+        return newBoard;
+      });
+    }
+
+  return (
   <div>
    {board.map((cell,index) => (
-     <Square value={cell} key={index} />
+     <Square value={cell} key={index} onClick={() => handleSquareClick(index)} />
    ))}
-  </div>
+  </div>);
   
 }
 
