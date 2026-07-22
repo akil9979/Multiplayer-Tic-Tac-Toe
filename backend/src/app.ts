@@ -5,9 +5,14 @@ import userRoutes from "./routes/userRoutes";
 
 const app = express();
 
-dotenv.config();
 
-app.use(cors());
+
+app.use(cors(
+    {
+        origin: "http://localhost:5173",
+        methods: ["GET", "POST"]
+    }
+));
 
 app.use(express.json());
 
