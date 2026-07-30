@@ -2,6 +2,8 @@ export type Player = "circle" | "cross";
 
 export type Cell = Player | null;
 
+export type Winner = Player | "draw" | null;
+
 export interface Game {
   board: Cell[];
   currentPlayer: Player;
@@ -11,5 +13,5 @@ export interface Game {
     cross?: string;
   };
 
-  winner: Player | "draw" | null;
+  winner: Winner;
 }

@@ -18,6 +18,10 @@ function App() {
     socket.emit("join-room", joinRoomId);
   };
 
+  const handleMakeMove = (index: number) => {
+    socket.emit("make-move", { roomId:createdRoomId, index });
+  };
+
   useEffect(() => {
     console.log("Socket ID:", socket.id);
 
@@ -37,6 +41,10 @@ function App() {
 
     socket.on("player-joined", () => {
       alert("A player has joined the room!");
+    });
+
+    socket.on("game-updated", (updatedGame) => {
+      console.log("Game updated:", updatedGame);
     });
 
     return () => {
