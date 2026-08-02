@@ -19,40 +19,57 @@ export function initializeSocket(httpServer: HttpServer) {
     socket.on("create-room", () => {
       const roomId = generateRoomId();
 
-      gameManager.createGame(roomId, socket.id);
+      const game = gameManager.createGame(roomId, socket.id);
 
       // 2. Join the room
       socket.join(roomId);
 
       // 3. Emit "room-created" back to this socket
       socket.emit("room-created", roomId);
+      socket.emit("game-created", game);
+      socket.emit("player-assigned", "circle");  
       console.log(`Room ${roomId} created by ${socket.id}`);
     });
 
     socket.on("join-room", (joinRoomId) => {
-      let room = io.sockets.adapter.rooms.get(joinRoomId);
+      const room = io.sockets.adapter.rooms.get(joinRoomId);
+
       if (!room) {
         socket.emit("room-not-found");
-      } else {
-        if (room.size >= 2) {
-          socket.emit("room-full");
-        } else {
-          gameManager.joinGame(joinRoomId, socket.id);
-          socket.join(joinRoomId);
-          io.to(joinRoomId).emit("player-joined");
-          console.log(`Player ${socket.id} joined room ${joinRoomId}`);
-        }
+        return;
       }
+
+      if (room.size >= 2) {
+        socket.emit("room-full");
+        return;
+      }
+
+      const game=gameManager.joinGame(joinRoomId, socket.id);
+      socket.join(joinRoomId);
+
+      // Send room ID only to the player who joined
+      socket.emit("room-joined", joinRoomId);
+      socket.emit("game-created", game);
+      socket.emit("player-assigned", "cross"); 
+
+      // Notify everyone in the room that a new player has joined
+      io.to(joinRoomId).emit("player-joined");
     });
-
     socket.on("make-move", ({ roomId, index }) => {
-
       const updatedGame = gameManager.makeMove(roomId, index, socket.id);
       if (updatedGame) {
         io.to(roomId).emit("game-updated", updatedGame);
         console.log(
           `Player ${socket.id} made a move in room ${roomId} at index ${index}`,
         );
+      }
+    });
+    socket.on("disconnect", () => {
+      const result = gameManager.handleDisconnect(socket.id);
+      if (result) {
+        
+        io.to(result.roomId).emit("player-disconnected", result.game);
+        console.log(`Player ${socket.id} disconnected from room ${result.roomId}`);
       }
     });
   });

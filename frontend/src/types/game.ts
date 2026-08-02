@@ -1,13 +1,12 @@
-export type PlayerSign =
-  | "circle"
-  | "cross";
+export type Player = "circle" | "cross";
 
-export type Cell =
-  | null
-  | PlayerSign;
+export type Cell = Player | null;
 
-export type Winner =
-  | PlayerSign
-  | "draw"
-  | "opponentLeftMatch"
-  | null;
+export type Winner = Player | "draw" ;
+
+export interface Game {
+  board: Cell[];
+  currentPlayer: Player;
+
+  winner: Winner;
+}

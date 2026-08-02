@@ -3,9 +3,9 @@ import { checkWinner } from "./checkWinner";
 export class GameManager {
   private games = new Map<string, Game>();
 
-  createGame(roomId: string, socketId: string): void {
+  createGame(roomId: string, socketId: string): Game {
     if (this.games.has(roomId)) {
-      return;
+      return this.games.get(roomId)!;
     }
     const game: Game = {
       board: Array(9).fill(null),
@@ -17,20 +17,25 @@ export class GameManager {
     };
 
     this.games.set(roomId, game);
+    return game;
   }
 
-  joinGame(roomId: string, socketId: string): void {
+  joinGame(roomId: string, socketId: string): Game {
     const game = this.games.get(roomId);
+    if (!game) {
+      throw new Error("Game not found");
+    }
+    game.players.cross = socketId;
+    return game;
+  }
+
+  makeMove(roomId: string, index: number, socketId: string): Game | undefined {
+    const game = this.games.get(roomId);
+
     if (!game) {
       return;
     }
-    game.players.cross = socketId;
-  }
-
-  makeMove(roomId: string, index: number, socketId: string) {
-    const game = this.games.get(roomId);
-
-    if (!game) {
+    if (!game.players.cross) {
       return;
     }
     if (game.winner !== null) {
@@ -62,4 +67,26 @@ export class GameManager {
     return game;
   }
 
+  handleDisconnect(
+    socketId: string,
+  ): { roomId: string; game: Game } | undefined {
+    for (const [roomId, game] of this.games) {
+      if (game.players.cross === socketId) {
+        game.winner = "circle";
+        return { roomId, game };
+      }
+
+      if (game.players.circle === socketId) {
+        if (!game.players.cross) {
+          this.games.delete(roomId);
+          return undefined; 
+        } else if (game.players.cross) {
+          game.winner = "cross";
+          return { roomId, game };
+        }
+      }
+    }
+
+    return undefined;
+  }
 }
