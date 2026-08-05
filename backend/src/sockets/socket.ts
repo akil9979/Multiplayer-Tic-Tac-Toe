@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import type { Server as HttpServer } from "http";
 import { generateRoomId } from "../utils/generateRoomId";
 import { GameManager } from "../games/gameManager";
+import { Socket } from "dgram";
 
 const gameManager = new GameManager();
 
@@ -27,7 +28,7 @@ export function initializeSocket(httpServer: HttpServer) {
       // 3. Emit "room-created" back to this socket
       socket.emit("room-created", roomId);
       socket.emit("game-created", game);
-      socket.emit("player-assigned", "circle");  
+      socket.emit("player-assigned", "circle");
       console.log(`Room ${roomId} created by ${socket.id}`);
     });
 
@@ -44,13 +45,13 @@ export function initializeSocket(httpServer: HttpServer) {
         return;
       }
 
-      const game=gameManager.joinGame(joinRoomId, socket.id);
+      const game = gameManager.joinGame(joinRoomId, socket.id);
       socket.join(joinRoomId);
 
       // Send room ID only to the player who joined
       socket.emit("room-joined", joinRoomId);
       socket.emit("game-created", game);
-      socket.emit("player-assigned", "cross"); 
+      socket.emit("player-assigned", "cross");
 
       // Notify everyone in the room that a new player has joined
       io.to(joinRoomId).emit("player-joined");
@@ -67,10 +68,34 @@ export function initializeSocket(httpServer: HttpServer) {
     socket.on("disconnect", () => {
       const result = gameManager.handleDisconnect(socket.id);
       if (result) {
-        
         io.to(result.roomId).emit("player-disconnected", result.game);
-        console.log(`Player ${socket.id} disconnected from room ${result.roomId}`);
+        console.log(
+          `Player ${socket.id} disconnected from room ${result.roomId}`,
+        );
       }
+    });
+    socket.on("request-rematch", (roomId) => {
+      const result = gameManager.requestRematch(roomId, socket.id);
+
+      if (!result) {
+        return;
+      }
+
+      if (result.rematchRequests.circle && result.rematchRequests.cross) {
+        const newGame = gameManager.resetGame(result.roomId);
+
+        if (newGame) {
+          io.to(result.roomId).emit("rematch-accepted", newGame);
+        }
+
+        return;
+      }
+
+      socket.to(result.roomId).emit("rematch-requested");
+
+      console.log(
+        `Player ${socket.id} requested a rematch in room ${result.roomId}`,
+      );
     });
   });
 

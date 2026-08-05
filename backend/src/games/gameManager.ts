@@ -1,8 +1,8 @@
-import type { Game } from "../types/game";
+import type { Game, RematchRequest } from "../types/game";
 import { checkWinner } from "./checkWinner";
 export class GameManager {
   private games = new Map<string, Game>();
-
+  private rematchRequests = new Map<string, RematchRequest>();
   createGame(roomId: string, socketId: string): Game {
     if (this.games.has(roomId)) {
       return this.games.get(roomId)!;
@@ -10,6 +10,7 @@ export class GameManager {
     const game: Game = {
       board: Array(9).fill(null),
       currentPlayer: "circle",
+      startingPlayer: "circle",
       players: {
         circle: socketId,
       },
@@ -79,7 +80,7 @@ export class GameManager {
       if (game.players.circle === socketId) {
         if (!game.players.cross) {
           this.games.delete(roomId);
-          return undefined; 
+          return undefined;
         } else if (game.players.cross) {
           game.winner = "cross";
           return { roomId, game };
@@ -89,4 +90,55 @@ export class GameManager {
 
     return undefined;
   }
+  requestRematch(
+    roomId: string,
+    socketId: string,
+  ): { roomId: string; rematchRequests: RematchRequest } | undefined {
+    const game = this.games.get(roomId);
+
+    if (!game) {
+      return;
+    }
+
+    // Get existing request, or create a fresh one
+    let request = this.rematchRequests.get(roomId);
+
+    if (!request) {
+      request = {
+        circle: false,
+        cross: false,
+      };
+    }
+
+    // Find which player requested the rematch
+    if (game.players.circle === socketId) {
+      request.circle = true;
+    } else if (game.players.cross === socketId) {
+      request.cross = true;
+    } else {
+      // Socket doesn't belong to this game
+      return;
+    }
+
+    // Save/update it in the Map
+    this.rematchRequests.set(roomId, request);
+
+    return {
+      roomId,
+      rematchRequests: request,
+    };
+  }
+
+  resetGame(roomId: string): Game | undefined {
+    const game = this.games.get(roomId);
+    if (!game) {
+      return;
+    }
+    game.board = Array(9).fill(null);
+    game.startingPlayer = game.startingPlayer === "circle" ? "cross" : "circle";
+    game.currentPlayer = game.startingPlayer;
+    game.winner = null;
+    this.rematchRequests.delete(roomId);
+    return game;   
+}
 }

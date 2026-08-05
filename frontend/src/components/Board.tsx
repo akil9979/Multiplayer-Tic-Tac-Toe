@@ -30,7 +30,6 @@ if (!game) {
     <div>
 
       
-      <h2>Winner: {game.winner}</h2>
 
       {game.board.map((cell, index) => (
         <Square

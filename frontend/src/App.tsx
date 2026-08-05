@@ -5,6 +5,8 @@ import type { Game, Player } from "./types/game.ts";
 function App() {
   const [roomId, setRoomId] = useState("");
   const [roomInput, setRoomInput] = useState("");
+  const [opponentRequested, setOpponentRequested] = useState(false);
+  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
 
   const [game, setGame] = useState<Game | null>(null);
   const [player, setPlayer] = useState<Player | null>(null);
@@ -22,6 +24,10 @@ function App() {
     socket.emit("join-room", roomInput);
   };
 
+  const handleRematchRequest = () => {
+    socket.emit("request-rematch", roomId);
+    setWaitingForOpponent(true);
+  };
   useEffect(() => {
     console.log("Socket ID:", socket.id);
 
@@ -63,6 +69,16 @@ function App() {
       setGame(updatedGame);
       alert("Your opponent has disconnected!");
     });
+    socket.on("rematch-requested", () => {
+      setOpponentRequested(true);
+      alert("Your opponent has requested a rematch!");
+    });
+    socket.on("rematch-accepted", (newGame) => {
+      setGame(newGame);
+      setWaitingForOpponent(false);
+      setOpponentRequested(false);
+      alert("Rematch accepted! Game reset.");
+    });
 
     return () => {
       socket.off("connect");
@@ -75,6 +91,8 @@ function App() {
       socket.off("game-created");
       socket.off("room-joined");
       socket.off("player-disconnected");
+      socket.off("rematch-requested");
+      socket.off("rematch-accepted");
     };
   }, []);
 
@@ -105,6 +123,33 @@ function App() {
       )}
 
       <Board game={game} roomId={roomId} />
+
+      {game !== null && game.winner && (
+        <p>
+          {game.winner === player
+            ? "🏆 You Win!"
+            : game.winner === "draw"
+              ? "🤝 It's a Draw!"
+              : "💔 You Lose!"}
+        </p>
+      )}
+
+      {game?.winner && !opponentRequested && (
+        <>
+          <button onClick={handleRematchRequest} disabled={waitingForOpponent}>
+            {waitingForOpponent ? "Waiting for opponent..." : "Request Rematch"}
+          </button>
+
+          {waitingForOpponent && <p>Waiting for your opponent to accept...</p>}
+        </>
+      )}
+
+      {game?.winner && opponentRequested && (
+        <>
+          <p>Your opponent wants a rematch.</p>
+          <button onClick={handleRematchRequest}>Accept Rematch</button>
+        </>
+      )}
     </>
   );
 }
