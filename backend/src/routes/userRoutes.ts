@@ -1,9 +1,12 @@
 import {Router} from "express";
-// import { createUser, getUser } from "../controllers/userController";
+import { createUser,getProfile, loginUser, logoutUser } from "../controllers/userController";
+import { authMiddleware } from "../middleware/auth.middleware";
 
 const route=Router();
 
-// route.get("/",getUser);
-// route.post("/create",createUser)
+route.post("/create",createUser)
+route.post("/login", loginUser);
+route.get("/profile",authMiddleware,getProfile)
+route.get("/logout",authMiddleware,logoutUser)
 
 export default route;
