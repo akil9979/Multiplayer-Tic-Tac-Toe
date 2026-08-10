@@ -53,7 +53,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
   try {
     const result = await pool.query(
-      "SELECT id, name, email, password_hash FROM users WHERE email = $1",
+      "SELECT id, name, email, password_hash, created_at FROM users WHERE email = $1",
       [email],
     );
     if (result.rows.length === 0) {
@@ -79,6 +79,7 @@ export const loginUser = async (req: Request, res: Response) => {
       id: user.id,
       name: user.name,
       email: user.email,
+      created_at: user.created_at,
     });
   } catch (error) {
     res.status(500).json(error);
