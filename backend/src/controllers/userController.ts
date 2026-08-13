@@ -115,3 +115,4 @@ export const logoutUser =  (
   })
   .json({ message: "Logged out successfully" });
 };
+
