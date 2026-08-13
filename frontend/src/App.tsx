@@ -4,6 +4,7 @@ import Game from "./pages/Game";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ProtectedRoute from "./components/Protectedroutes";
+import PublicRoute from "./components/PublicRoutes";
 import { useEffect } from "react";
 import { useAppDispatch } from "./redux/hook";
 import { logout, setUser } from "./redux/slices/authSlice";
@@ -29,8 +30,8 @@ useEffect(() => {
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
+      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
       <Route path="/game" element={<ProtectedRoute><Game /></ProtectedRoute>} />
     </Routes>
   );
