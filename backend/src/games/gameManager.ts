@@ -3,7 +3,7 @@ import { checkWinner } from "./checkWinner";
 export class GameManager {
   private games = new Map<string, Game>();
   private rematchRequests = new Map<string, RematchRequest>();
-  createGame(roomId: string, socketId: string): Game {
+  createGame(roomId: string, socketId: string, userId: number): Game {
     if (this.games.has(roomId)) {
       return this.games.get(roomId)!;
     }
@@ -11,9 +11,15 @@ export class GameManager {
       board: Array(9).fill(null),
       currentPlayer: "circle",
       startingPlayer: "circle",
+
       players: {
         circle: socketId,
       },
+
+      playerUserIds: {
+        circle: userId,
+      },
+
       winner: null,
     };
 
@@ -21,12 +27,13 @@ export class GameManager {
     return game;
   }
 
-  joinGame(roomId: string, socketId: string): Game {
+  joinGame(roomId: string, socketId: string, userId: number): Game {
     const game = this.games.get(roomId);
     if (!game) {
       throw new Error("Game not found");
     }
     game.players.cross = socketId;
+    game.playerUserIds.cross = userId;
     return game;
   }
 
@@ -139,6 +146,6 @@ export class GameManager {
     game.currentPlayer = game.startingPlayer;
     game.winner = null;
     this.rematchRequests.delete(roomId);
-    return game;   
-}
+    return game;
+  }
 }

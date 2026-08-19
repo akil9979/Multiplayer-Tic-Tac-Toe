@@ -9,9 +9,14 @@ export interface Game {
   currentPlayer: Player;
   startingPlayer: Player;
   players: {
-    circle: string;
-    cross?: string;
-  };
+  circle: string;
+  cross?: string;
+};
+
+playerUserIds: {
+  circle: number;
+  cross?: number;
+};
 
   winner: Winner;
 }

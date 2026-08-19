@@ -2,8 +2,8 @@ import { Server } from "socket.io";
 import type { Server as HttpServer } from "http";
 import { generateRoomId } from "../utils/generateRoomId";
 import { GameManager } from "../games/gameManager";
-import { Socket } from "dgram";
-
+import * as cookie from "cookie";
+import jwt from "jsonwebtoken";
 const gameManager = new GameManager();
 
 export function initializeSocket(httpServer: HttpServer) {
@@ -11,17 +11,49 @@ export function initializeSocket(httpServer: HttpServer) {
     cors: {
       origin: "http://localhost:5173",
       methods: ["GET", "POST"],
+      credentials: true,
     },
+  });
+
+  io.use((socket, next) => {
+    const cookies = socket.handshake.headers.cookie;
+
+    if (!cookies) {
+      return next(new Error("Authentication required"));
+    }
+
+    const parsedCookies = cookie.parseCookie(cookies);
+    const token = parsedCookies.token;
+
+    if (!token) {
+      return next(new Error("Authentication required"));
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET;
+
+    if (!JWT_SECRET) {
+      return next(new Error("JWT secret is not configured"));
+    }
+
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+      socket.userId = decoded.userId;
+      console.log("Authenticated user:", decoded.userId);
+
+      next();
+    } catch (error) {
+      return next(new Error("Invalid token"));
+    }
   });
 
   io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
+    console.log("Authenticated user ID:", socket.userId);
 
     socket.on("create-room", () => {
       const roomId = generateRoomId();
 
-      const game = gameManager.createGame(roomId, socket.id);
-
+      const game = gameManager.createGame(roomId, socket.id, socket.userId);
       // 2. Join the room
       socket.join(roomId);
 
@@ -30,6 +62,7 @@ export function initializeSocket(httpServer: HttpServer) {
       socket.emit("game-created", game);
       socket.emit("player-assigned", "circle");
       console.log(`Room ${roomId} created by ${socket.id}`);
+      console.log("Game:", game);
     });
 
     socket.on("join-room", (joinRoomId) => {
@@ -45,7 +78,7 @@ export function initializeSocket(httpServer: HttpServer) {
         return;
       }
 
-      const game = gameManager.joinGame(joinRoomId, socket.id);
+      const game = gameManager.joinGame(joinRoomId, socket.id, socket.userId);
       socket.join(joinRoomId);
 
       // Send room ID only to the player who joined
@@ -55,6 +88,7 @@ export function initializeSocket(httpServer: HttpServer) {
 
       // Notify everyone in the room that a new player has joined
       io.to(joinRoomId).emit("player-joined");
+      console.log("Game:", game);
     });
     socket.on("make-move", ({ roomId, index }) => {
       const updatedGame = gameManager.makeMove(roomId, index, socket.id);

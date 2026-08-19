@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { socket } from "../Socket";
 import Board from "../components/Board";
 import type { Game as GameType, Player } from "../types/gameType";
+import {useAppSelector} from "../redux/hook";
 
 function Game() {
   const [roomId, setRoomId] = useState("");
@@ -12,6 +13,7 @@ function Game() {
 
   const [game, setGame] = useState<GameType | null>(null);
   const [player, setPlayer] = useState<Player | null>(null);
+  const user = useAppSelector((state) => state.auth.user);
 
   const handleCreateRoom = () => {
     socket.emit("create-room");
@@ -121,7 +123,7 @@ function Game() {
       {game !== null && (
         <>
           <p>
-            You are:{" "}
+            {"Welcome, " + (user?.name || "Player")}! You are:{" "}
             {player === "circle" ? "⭕ Circle" : "❌ Cross"}
           </p>
 

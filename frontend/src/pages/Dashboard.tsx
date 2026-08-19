@@ -24,7 +24,7 @@ export default function Dashboard() {
     <>
       <h1>Dashboard</h1>
        <p>Welcome, {user?.name}</p>
-      <p>Email: {user?.email}</p>
+      
       <Link to="/game">Go to Game</Link>
       <br />
       <button onClick={handleLogout}>logout</button>
