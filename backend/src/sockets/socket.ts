@@ -4,6 +4,7 @@ import { generateRoomId } from "../utils/generateRoomId";
 import { GameManager } from "../games/gameManager";
 import * as cookie from "cookie";
 import jwt from "jsonwebtoken";
+import { createGameRecord } from "../models/gameModel";
 const gameManager = new GameManager();
 
 export function initializeSocket(httpServer: HttpServer) {
@@ -50,19 +51,28 @@ export function initializeSocket(httpServer: HttpServer) {
     console.log("User connected:", socket.id);
     console.log("Authenticated user ID:", socket.userId);
 
-    socket.on("create-room", () => {
-      const roomId = generateRoomId();
+    socket.on("create-room", async () => {
+      try {
+        const roomId = generateRoomId();
 
-      const game = gameManager.createGame(roomId, socket.id, socket.userId);
-      // 2. Join the room
-      socket.join(roomId);
+        const gameRecord = await createGameRecord(roomId, socket.userId);
 
-      // 3. Emit "room-created" back to this socket
-      socket.emit("room-created", roomId);
-      socket.emit("game-created", game);
-      socket.emit("player-assigned", "circle");
-      console.log(`Room ${roomId} created by ${socket.id}`);
-      console.log("Game:", game);
+        const game = gameManager.createGame(roomId, socket.id, socket.userId);
+
+        socket.join(roomId);
+
+        socket.emit("room-created", roomId);
+        socket.emit("game-created", game);
+        socket.emit("player-assigned", "circle");
+
+        console.log(`Room ${roomId} created by ${socket.id}`);
+        console.log("Game:", game);
+        console.log("Database record:", gameRecord);
+      } catch (error) {
+        console.error("Failed to create game:", error);
+
+        socket.emit("game-creation-failed");
+      }
     });
 
     socket.on("join-room", (joinRoomId) => {
