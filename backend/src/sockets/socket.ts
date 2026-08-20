@@ -5,6 +5,7 @@ import { GameManager } from "../games/gameManager";
 import * as cookie from "cookie";
 import jwt from "jsonwebtoken";
 import { createGameRecord } from "../models/gameModel";
+import { joinGameRecord } from "../models/gameModel";
 const gameManager = new GameManager();
 
 export function initializeSocket(httpServer: HttpServer) {
@@ -75,31 +76,51 @@ export function initializeSocket(httpServer: HttpServer) {
       }
     });
 
-    socket.on("join-room", (joinRoomId) => {
-      const room = io.sockets.adapter.rooms.get(joinRoomId);
+   socket.on("join-room", async (joinRoomId) => {
+  const room = io.sockets.adapter.rooms.get(joinRoomId);
 
-      if (!room) {
-        socket.emit("room-not-found");
-        return;
-      }
+  if (!room) {
+    socket.emit("room-not-found");
+    return;
+  }
 
-      if (room.size >= 2) {
-        socket.emit("room-full");
-        return;
-      }
+  if (room.size >= 2) {
+    socket.emit("room-full");
+    return;
+  }
 
-      const game = gameManager.joinGame(joinRoomId, socket.id, socket.userId);
-      socket.join(joinRoomId);
+  try {
+    const gameRecord = await joinGameRecord(
+      joinRoomId,
+      socket.userId
+    );
 
-      // Send room ID only to the player who joined
-      socket.emit("room-joined", joinRoomId);
-      socket.emit("game-created", game);
-      socket.emit("player-assigned", "cross");
+    if (!gameRecord) {
+      socket.emit("room-full");
+      return;
+    }
 
-      // Notify everyone in the room that a new player has joined
-      io.to(joinRoomId).emit("player-joined");
-      console.log("Game:", game);
-    });
+    const game = gameManager.joinGame(
+      joinRoomId,
+      socket.id,
+      socket.userId
+    );
+
+    socket.join(joinRoomId);
+
+    socket.emit("room-joined", joinRoomId);
+    socket.emit("game-created", game);
+    socket.emit("player-assigned", "cross");
+
+    io.to(joinRoomId).emit("player-joined");
+
+    console.log("Game:", game);
+    console.log("Game DB record:", gameRecord);
+  } catch (error) {
+    console.error("Failed to join game:", error);
+    socket.emit("join-failed");
+  }
+});
     socket.on("make-move", ({ roomId, index }) => {
       const updatedGame = gameManager.makeMove(roomId, index, socket.id);
       if (updatedGame) {
