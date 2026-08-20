@@ -6,27 +6,45 @@ import Signup from "./pages/Signup";
 import ProtectedRoute from "./components/Protectedroutes";
 import PublicRoute from "./components/PublicRoutes";
 import { useEffect } from "react";
-import { useAppDispatch } from "./redux/hook";
+import { useAppDispatch, useAppSelector } from "./redux/hook";
 import { logout, setUser } from "./redux/slices/authSlice";
 import api from "./api/axios";
+import { socket } from "./Socket";
+  
 
 function App() {
   const dispatch = useAppDispatch();
 
-useEffect(() => {
-  const checkAuth = async () => {
-    try {
-      const response = await api.get("/users/profile");
+const isAuthenticated = useAppSelector(
+    (state) => state.auth.isAuthenticated
+  );
 
-      dispatch(setUser(response.data));
-    } catch (error) {
-      console.error(error);
-      dispatch(logout());
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await api.get("/users/profile");
+
+        dispatch(setUser(response.data));
+      } catch (error) {
+        console.error(error);
+        dispatch(logout());
+      }
+    };
+
+    checkAuth();
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      socket.connect();
+    } else {
+      socket.disconnect();
     }
-  };
 
-  checkAuth();
-}, [dispatch]);
+    return () => {
+      socket.disconnect();
+    };
+  }, [isAuthenticated]);
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
